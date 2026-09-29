@@ -2,51 +2,50 @@
 
 Personal AI analysis assistant for Windows.
 
-## Current version: 0.4.0 — Step 4
+## Current version: 0.5.0 — Step 5
 
-### Completed
+Step 5 adds Lilly's persistent chart-task/condition engine.
 
-- Persistent desktop alerts with sound and acknowledgement
-- Windows background process + system tray
-- Explicit Chrome **Watch This Tab / Stop Watching**
-- Local-only bridge on `127.0.0.1:8765`
-- Visible-tab chart screenshot capture
-- **Capture Chart Now** control
-- Capture validation: images are accepted only from the selected tab
-- Latest chart image stored locally at `data/captures/latest_chart.jpg`
-- Latest capture metadata stored at `data/captures/latest_chart.json`
-- Tray/status reports the latest capture timestamp
+### New in Step 5
+- Persistent watch tasks stored in `data/tasks.json`
+- Price reaches/goes above a level
+- Price reaches/goes below a level
+- Optional task labels
+- Active/triggered task state
+- Persistent Lilly alert when a condition is triggered
+- Task count in the Windows tray
+- Chrome popup task creation/deletion UI
+- Manual **Test observation** input to validate the engine end-to-end
 
-Step 4 creates the chart visual-data pipeline. It does not place trades or make autonomous trading decisions.
+### Important architecture boundary
+Step 4 gives Lilly chart screenshots, but exact numeric price extraction from arbitrary chart pixels is not yet reliable. Step 5 therefore separates **observation input** from **condition evaluation** instead of pretending screenshots provide exact prices.
 
-## Update and run
+The manual test observation proves:
+`observation -> task engine -> condition evaluation -> persistent alert`.
 
+A later structured market-data or AI chart-analysis adapter can feed this same engine automatically.
+
+## Update/test
 ```powershell
 git pull origin main
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
 python run_lilly.py
 ```
 
-## Reload the Chrome extension after this update
+Then open `chrome://extensions` and **Reload** Lilly.
 
-1. Open `chrome://extensions`
-2. Find **Lilly — Personal AI Analysis Agent**
-3. Click **Reload**
-4. Open your chart tab
-5. Open Lilly and click **Watch This Tab**
-6. Click **Capture Chart Now**
-7. Check `data/captures/latest_chart.jpg`
-
-The watched tab must be the visible/active tab at capture time because Chrome's visible-tab capture API captures what is currently rendered.
+Test:
+1. Watch your chart tab.
+2. Add a task such as **Price reaches/goes above 100**.
+3. Under **Test observation**, enter `99` — no condition alert should fire.
+4. Enter `100` or `101` — Lilly should fire a persistent **Chart Condition Triggered** alert.
+5. The task should become **TRIGGERED** and no longer be active.
 
 ## Roadmap
-
 1. Persistent notification engine — completed
 2. Windows background process/system tray — completed
 3. Chrome extension + explicit tab permission — completed
 4. Chart capture/data adapter — completed
-5. Task/analysis engine ("watch this level", chart conditions)
-6. Observation history
+5. Task/condition engine — completed
+6. Observation history + automatic analysis/data adapter
 7. "Lilly, what's the update?"
 8. Start automatically with Windows
