@@ -1,28 +1,39 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Lilly</title>
+  <meta charset="utf-8"><title>Lilly</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <main>
-    <div class="brand">
-      <div class="logo">L</div>
-      <div><h1>Lilly</h1><p>Chart capture</p></div>
-    </div>
-    <div id="connection" class="status offline">Checking Lilly…</div>
-    <section>
-      <span class="label">Current tab</span>
-      <strong id="tabTitle">Loading…</strong>
-      <small id="tabUrl"></small>
-    </section>
-    <button id="watch">Watch This Tab</button>
-    <button id="capture">Capture Chart Now</button>
-    <button id="stop" class="secondary">Stop Watching</button>
-    <p id="message" class="message"></p>
-    <p class="privacy">Captures only happen for the tab you explicitly selected, while it is visible.</p>
-  </main>
-  <script src="popup.js"></script>
+<main>
+  <div class="brand"><div class="logo">L</div><div><h1>Lilly</h1><p>Chart tasks</p></div></div>
+  <div id="connection" class="status offline">Checking Lilly…</div>
+  <section><span class="label">Current tab</span><strong id="tabTitle">Loading…</strong><small id="tabUrl"></small></section>
+  <button id="watch">Watch This Tab</button>
+  <button id="capture">Capture Chart Now</button>
+  <button id="stop" class="secondary">Stop Watching</button>
+
+  <section class="taskbox">
+    <span class="label">Add chart condition</span>
+    <select id="kind">
+      <option value="price_above">Price reaches / goes above</option>
+      <option value="price_below">Price reaches / goes below</option>
+    </select>
+    <input id="level" type="number" step="any" placeholder="Price level">
+    <input id="label" type="text" maxlength="160" placeholder="Optional note">
+    <button id="addTask">Add Watch Task</button>
+  </section>
+
+  <section class="taskbox">
+    <span class="label">Test observation</span>
+    <input id="observedPrice" type="number" step="any" placeholder="Observed price">
+    <button id="sendPrice" class="secondary">Send Test Price to Lilly</button>
+    <small>This manually feeds the condition engine; exact automatic price extraction comes in the next analysis/data layer.</small>
+  </section>
+
+  <section><span class="label">Active / recent tasks</span><div id="tasks">No tasks yet.</div></section>
+  <p id="message" class="message"></p>
+</main>
+<script src="popup.js"></script>
 </body>
 </html>
