@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Lilly — Personal AI Analysis Agent",
+  "version": "0.3.0",
+  "description": "Explicitly select a Chrome tab for Project Lilly to monitor.",
+  "permissions": ["activeTab", "tabs"],
+  "host_permissions": ["http://127.0.0.1:8765/*"],
+  "action": {
+    "default_title": "Lilly",
+    "default_popup": "popup.html"
+  }
+}
