@@ -1,7 +1,10 @@
 import sys
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
+
+from .chrome_bridge import ChromeBridge
 from .notifications import LillyAlert
 from .tray import LillyTray
+
 
 class LillyApplication:
     def __init__(self):
@@ -10,6 +13,7 @@ class LillyApplication:
         self.app.setQuitOnLastWindowClosed(False)
         self.active_alerts = []
         self.paused = False
+        self.watched_tab = None
 
         if not QSystemTrayIcon.isSystemTrayAvailable():
             raise RuntimeError("Windows system tray is not available.")
@@ -21,14 +25,28 @@ class LillyApplication:
         self.tray.exit_requested.connect(self.shutdown)
         self.tray.show()
 
+        self.bridge = ChromeBridge(parent=self.app)
+        self.bridge.watch_started.connect(self.on_watch_started)
+        self.bridge.watch_stopped.connect(self.on_watch_stopped)
+        self.bridge.bridge_error.connect(self.on_bridge_error)
+        if not self.bridge.start():
+            self.show_alert(
+                "Lilly — Chrome Bridge Error",
+                "Lilly could not start the Chrome connection on 127.0.0.1:8765. "
+                "Another Lilly process may already be running.",
+                force=True,
+            )
+
     def show_alert(self, title, message, force=False):
         if self.paused and not force:
             return
         alert = LillyAlert(title, message)
         self.active_alerts.append(alert)
+
         def remove_alert():
             if alert in self.active_alerts:
                 self.active_alerts.remove(alert)
+
         alert.closed.connect(remove_alert)
         alert.show()
 
@@ -36,21 +54,45 @@ class LillyApplication:
         self.show_alert(
             "Lilly — Test Alert",
             "Background mode is working. This alert remains visible until you acknowledge it.",
-            force=True
+            force=True,
         )
 
     def show_status(self):
         state = "PAUSED" if self.paused else "ACTIVE"
-        self.show_alert(
-            "Lilly — Status",
-            f"Lilly is {state} and running in the Windows background. Chrome monitoring will be connected in Step 3.",
-            force=True
-        )
+        if self.watched_tab:
+            chrome = f'Watching Chrome tab: {self.watched_tab.get("title", "Untitled tab")}'
+        else:
+            chrome = "No Chrome tab is currently selected."
+        self.show_alert("Lilly — Status", f"Lilly is {state}. {chrome}", force=True)
 
     def set_paused(self, paused):
         self.paused = paused
 
+    def on_watch_started(self, tab):
+        self.watched_tab = tab
+        self.tray.set_watched_tab(tab.get("title"))
+        self.show_alert(
+            "Lilly — Chrome Connected",
+            f'Now watching: {tab.get("title", "Untitled tab")}\n\n'
+            "Step 3 tracks the selected tab identity. Chart capture and analysis are added in Step 4.",
+            force=True,
+        )
+
+    def on_watch_stopped(self):
+        old_title = self.watched_tab.get("title") if self.watched_tab else "Chrome tab"
+        self.watched_tab = None
+        self.tray.set_watched_tab(None)
+        self.show_alert(
+            "Lilly — Chrome Watch Stopped",
+            f"Stopped watching: {old_title}",
+            force=True,
+        )
+
+    def on_bridge_error(self, error):
+        self.show_alert("Lilly — Chrome Bridge Error", error, force=True)
+
     def shutdown(self):
+        self.bridge.stop()
         for alert in list(self.active_alerts):
             alert.close()
         self.tray.tray.hide()
@@ -58,6 +100,7 @@ class LillyApplication:
 
     def run(self):
         return self.app.exec()
+
 
 def run():
     lilly = LillyApplication()
