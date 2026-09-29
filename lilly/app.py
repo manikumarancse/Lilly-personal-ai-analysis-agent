@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .chrome_bridge import ChromeBridge
@@ -14,6 +15,7 @@ class LillyApplication:
         self.active_alerts = []
         self.paused = False
         self.watched_tab = None
+        self.latest_capture = None
 
         if not QSystemTrayIcon.isSystemTrayAvailable():
             raise RuntimeError("Windows system tray is not available.")
@@ -28,6 +30,7 @@ class LillyApplication:
         self.bridge = ChromeBridge(parent=self.app)
         self.bridge.watch_started.connect(self.on_watch_started)
         self.bridge.watch_stopped.connect(self.on_watch_stopped)
+        self.bridge.capture_received.connect(self.on_capture_received)
         self.bridge.bridge_error.connect(self.on_bridge_error)
         if not self.bridge.start():
             self.show_alert(
@@ -42,11 +45,9 @@ class LillyApplication:
             return
         alert = LillyAlert(title, message)
         self.active_alerts.append(alert)
-
         def remove_alert():
             if alert in self.active_alerts:
                 self.active_alerts.remove(alert)
-
         alert.closed.connect(remove_alert)
         alert.show()
 
@@ -60,33 +61,40 @@ class LillyApplication:
     def show_status(self):
         state = "PAUSED" if self.paused else "ACTIVE"
         if self.watched_tab:
-            chrome = f'Watching Chrome tab: {self.watched_tab.get("title", "Untitled tab")}'
+            chrome = f'Watching: {self.watched_tab.get("title", "Untitled tab")}.'
         else:
             chrome = "No Chrome tab is currently selected."
-        self.show_alert("Lilly — Status", f"Lilly is {state}. {chrome}", force=True)
+        if self.latest_capture:
+            capture = f' Latest chart capture: {self.latest_capture.get("captured_at")}.'
+        else:
+            capture = " No chart capture received yet."
+        self.show_alert("Lilly — Status", f"Lilly is {state}. {chrome}{capture}", force=True)
 
     def set_paused(self, paused):
         self.paused = paused
 
     def on_watch_started(self, tab):
         self.watched_tab = tab
+        self.latest_capture = None
         self.tray.set_watched_tab(tab.get("title"))
         self.show_alert(
             "Lilly — Chrome Connected",
             f'Now watching: {tab.get("title", "Untitled tab")}\n\n'
-            "Step 3 tracks the selected tab identity. Chart capture and analysis are added in Step 4.",
+            "Visible chart capture is ready. Keep the selected chart tab visible when capturing.",
             force=True,
         )
 
     def on_watch_stopped(self):
         old_title = self.watched_tab.get("title") if self.watched_tab else "Chrome tab"
         self.watched_tab = None
+        self.latest_capture = None
         self.tray.set_watched_tab(None)
-        self.show_alert(
-            "Lilly — Chrome Watch Stopped",
-            f"Stopped watching: {old_title}",
-            force=True,
-        )
+        self.show_alert("Lilly — Chrome Watch Stopped", f"Stopped watching: {old_title}", force=True)
+
+    def on_capture_received(self, meta):
+        self.latest_capture = meta
+        display_time = meta.get("captured_at", "").replace("T", " ")
+        self.tray.set_last_capture(display_time)
 
     def on_bridge_error(self, error):
         self.show_alert("Lilly — Chrome Bridge Error", error, force=True)
