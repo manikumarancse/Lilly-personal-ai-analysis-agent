@@ -1,27 +1,18 @@
-body {
-  margin: 0; width: 340px; background: #101828; color: #f9fafb;
-  font-family: "Segoe UI", Arial, sans-serif;
-}
-main { padding: 18px; }
-.brand { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
-.logo {
-  width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
-  background: #12b76a; font-weight: 800; font-size: 20px;
-}
-h1 { font-size: 18px; margin: 0; }
-.brand p { margin: 2px 0 0; color: #98a2b3; font-size: 12px; }
-.status { padding: 9px 11px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; }
-.online { background: #073d2a; color: #75e0a7; }
-.offline { background: #4a1d1f; color: #fda29b; }
-section { background: #1d2939; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
-.label { display: block; color: #98a2b3; font-size: 11px; margin-bottom: 5px; }
-strong, small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-small { color: #98a2b3; margin-top: 4px; }
-button {
-  width: 100%; border: 0; border-radius: 8px; padding: 11px; margin-top: 8px;
-  font-weight: 700; cursor: pointer; background: #12b76a; color: #fff;
-}
-button.secondary { background: #344054; }
-button:disabled { opacity: .45; cursor: default; }
-.message { min-height: 18px; font-size: 12px; color: #d0d5dd; }
-.privacy { color: #667085; font-size: 11px; margin-bottom: 0; }
+body { margin:0; width:360px; background:#101828; color:#f9fafb; font-family:"Segoe UI",Arial,sans-serif; }
+main { padding:18px; max-height:570px; overflow:auto; }
+.brand { display:flex; gap:10px; align-items:center; margin-bottom:16px; }
+.logo { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; background:#12b76a; font-weight:800; font-size:20px; }
+h1 { font-size:18px; margin:0; } .brand p { margin:2px 0 0; color:#98a2b3; font-size:12px; }
+.status { padding:9px 11px; border-radius:8px; margin-bottom:14px; font-size:13px; }
+.online { background:#073d2a; color:#75e0a7; } .offline { background:#4a1d1f; color:#fda29b; }
+section { background:#1d2939; padding:12px; border-radius:8px; margin-bottom:12px; }
+.label { display:block; color:#98a2b3; font-size:11px; margin-bottom:6px; }
+strong, small { display:block; overflow:hidden; text-overflow:ellipsis; }
+small { color:#98a2b3; margin-top:4px; font-size:11px; }
+button { width:100%; border:0; border-radius:8px; padding:10px; margin-top:8px; font-weight:700; cursor:pointer; background:#12b76a; color:#fff; }
+button.secondary { background:#344054; } button:disabled { opacity:.45; cursor:default; }
+input, select { box-sizing:border-box; width:100%; margin-top:7px; padding:9px; border-radius:7px; border:1px solid #475467; background:#101828; color:#fff; }
+.message { min-height:18px; font-size:12px; color:#d0d5dd; }
+.task { padding:7px 0; border-bottom:1px solid #344054; font-size:12px; }
+.task:last-child { border-bottom:0; } .triggered { color:#fdb022; }
+.delete { width:auto; padding:4px 7px; margin-left:6px; font-size:10px; background:#475467; }
