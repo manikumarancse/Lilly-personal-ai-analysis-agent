@@ -31,17 +31,21 @@ class LillyTray(QObject):
         self.paused = False
         self.watched_title = None
         self.last_capture = None
+        self.task_count = 0
         self.tray = QSystemTrayIcon(make_lilly_icon(True), parent)
         menu = QMenu()
-        self.status_action = QAction("● Lilly is Active")
+        self.status_action = QAction()
         self.status_action.setEnabled(False)
         menu.addAction(self.status_action)
-        self.watch_action = QAction("Chrome: No tab selected")
+        self.watch_action = QAction()
         self.watch_action.setEnabled(False)
         menu.addAction(self.watch_action)
-        self.capture_action = QAction("Capture: Waiting")
+        self.capture_action = QAction()
         self.capture_action.setEnabled(False)
         menu.addAction(self.capture_action)
+        self.tasks_action = QAction()
+        self.tasks_action.setEnabled(False)
+        menu.addAction(self.tasks_action)
         menu.addSeparator()
         test_action = QAction("Test persistent alert")
         test_action.triggered.connect(self.test_alert.emit)
@@ -49,7 +53,7 @@ class LillyTray(QObject):
         status_action = QAction("Show Lilly status")
         status_action.triggered.connect(self.status_requested.emit)
         menu.addAction(status_action)
-        self.pause_action = QAction("Pause Lilly")
+        self.pause_action = QAction()
         self.pause_action.triggered.connect(self.toggle_pause)
         menu.addAction(self.pause_action)
         menu.addSeparator()
@@ -70,6 +74,10 @@ class LillyTray(QObject):
 
     def set_last_capture(self, captured_at=None):
         self.last_capture = captured_at
+        self._refresh()
+
+    def set_task_count(self, count):
+        self.task_count = count
         self._refresh()
 
     def toggle_pause(self):
@@ -97,9 +105,8 @@ class LillyTray(QObject):
             self.watch_action.setText("Chrome: No tab selected")
             self.tray.setToolTip(base)
 
-        if self.last_capture:
-            self.capture_action.setText(f"Capture: {self.last_capture}")
-        elif self.watched_title:
-            self.capture_action.setText("Capture: Waiting for first image")
-        else:
-            self.capture_action.setText("Capture: Waiting")
+        self.capture_action.setText(
+            f"Capture: {self.last_capture}" if self.last_capture
+            else ("Capture: Waiting for first image" if self.watched_title else "Capture: Waiting")
+        )
+        self.tasks_action.setText(f"Tasks: {self.task_count} active")
