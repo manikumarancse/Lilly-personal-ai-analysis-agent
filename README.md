@@ -2,57 +2,51 @@
 
 Personal AI analysis assistant for Windows.
 
-## Current version: 0.3.0 — Step 3
+## Current version: 0.4.0 — Step 4
 
 ### Completed
 
-- Persistent bottom-right desktop alerts with sound
-- Alerts remain until acknowledged
+- Persistent desktop alerts with sound and acknowledgement
 - Windows background process + system tray
-- Active / Paused state
-- Local Chrome bridge on `127.0.0.1:8765`
-- Chrome Manifest V3 extension
-- Explicit **Watch This Tab**
-- Explicit **Stop Watching**
-- Selected tab title/URL passed to Lilly
-- Tray displays Chrome watch state
-- Persistent alert confirms watch start/stop
+- Explicit Chrome **Watch This Tab / Stop Watching**
+- Local-only bridge on `127.0.0.1:8765`
+- Visible-tab chart screenshot capture
+- **Capture Chart Now** control
+- Capture validation: images are accepted only from the selected tab
+- Latest chart image stored locally at `data/captures/latest_chart.jpg`
+- Latest capture metadata stored at `data/captures/latest_chart.json`
+- Tray/status reports the latest capture timestamp
 
-Step 3 intentionally tracks only the tab the user selects. It does **not** yet capture or analyze chart pixels/data; that is Step 4.
+Step 4 creates the chart visual-data pipeline. It does not place trades or make autonomous trading decisions.
 
-## Run Lilly
+## Update and run
 
 ```powershell
+git pull origin main
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python run_lilly.py
 ```
 
-## Install the Chrome extension (once)
+## Reload the Chrome extension after this update
 
-1. Open Chrome and go to `chrome://extensions`
-2. Turn on **Developer mode**
-3. Click **Load unpacked**
-4. Select the project's `chrome-extension` folder
-5. Pin **Lilly — Personal AI Analysis Agent** to the Chrome toolbar
+1. Open `chrome://extensions`
+2. Find **Lilly — Personal AI Analysis Agent**
+3. Click **Reload**
+4. Open your chart tab
+5. Open Lilly and click **Watch This Tab**
+6. Click **Capture Chart Now**
+7. Check `data/captures/latest_chart.jpg`
 
-## Test Step 3
-
-1. Keep `python run_lilly.py` running.
-2. Open the Chrome tab you want Lilly to watch.
-3. Click the Lilly extension.
-4. It should show **Lilly connected**.
-5. Click **Watch This Tab**.
-6. Lilly should produce a persistent desktop alert and the tray should say it is watching Chrome.
-7. Click **Stop Watching** to end the explicit watch.
+The watched tab must be the visible/active tab at capture time because Chrome's visible-tab capture API captures what is currently rendered.
 
 ## Roadmap
 
 1. Persistent notification engine — completed
 2. Windows background process/system tray — completed
 3. Chrome extension + explicit tab permission — completed
-4. Chart capture/data adapter — next
-5. Task manager ("watch this level")
+4. Chart capture/data adapter — completed
+5. Task/analysis engine ("watch this level", chart conditions)
 6. Observation history
 7. "Lilly, what's the update?"
 8. Start automatically with Windows
