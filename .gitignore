@@ -1,1 +1,10 @@
-.venv/\nvenv/\n__pycache__/\n*.py[cod]\n.env\n.DS_Store\n
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+.DS_Store
+data/captures/*.jpg
+data/captures/*.jpeg
+data/captures/*.png
+data/captures/*.json
