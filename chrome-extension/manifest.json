@@ -1,12 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Lilly — Personal AI Analysis Agent",
-  "version": "0.5.0",
-  "description": "Select a chart tab, capture it, and manage chart-watch conditions with Project Lilly.",
-  "permissions": ["activeTab", "tabs"],
-  "host_permissions": ["http://127.0.0.1:8765/*"],
-  "action": {
-    "default_title": "Lilly",
-    "default_popup": "popup.html"
-  }
+  "version": "0.6.0",
+  "description": "Monitor an explicitly selected TradingView chart and feed live visible prices to Project Lilly.",
+  "permissions": ["activeTab", "tabs", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1:8765/*", "https://*.tradingview.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Lilly", "default_popup": "popup.html" }
 }
