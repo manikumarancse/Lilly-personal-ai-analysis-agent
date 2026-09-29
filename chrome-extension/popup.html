@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lilly</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <div class="brand">
+      <div class="logo">L</div>
+      <div><h1>Lilly</h1><p>Chrome connection</p></div>
+    </div>
+    <div id="connection" class="status offline">Checking Lilly…</div>
+    <section>
+      <span class="label">Current tab</span>
+      <strong id="tabTitle">Loading…</strong>
+      <small id="tabUrl"></small>
+    </section>
+    <button id="watch">Watch This Tab</button>
+    <button id="stop" class="secondary">Stop Watching</button>
+    <p id="message" class="message"></p>
+    <p class="privacy">Lilly only watches a tab after you explicitly select it.</p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
