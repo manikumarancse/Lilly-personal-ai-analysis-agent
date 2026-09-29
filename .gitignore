@@ -8,3 +8,4 @@ data/captures/*.jpg
 data/captures/*.jpeg
 data/captures/*.png
 data/captures/*.json
+data/tasks.json
