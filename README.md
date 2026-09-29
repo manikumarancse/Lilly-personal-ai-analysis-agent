@@ -2,50 +2,42 @@
 
 Personal AI analysis assistant for Windows.
 
-## Current version: 0.5.0 — Step 5
+## Current version: 0.6.0 — Automatic TradingView live-price monitoring
 
-Step 5 adds Lilly's persistent chart-task/condition engine.
+### New
+- Background Chrome service worker
+- Automatic price observation from the explicitly selected TradingView tab
+- DOM-based TradingView current/close price extraction every ~2 seconds
+- Observations automatically feed Lilly's Step 5 task engine
+- Persistent sound alert when an active >= / <= condition triggers
+- Live price shown in Chrome popup and Windows tray
+- Selected-tab validation remains in the local Lilly bridge
+- No broker credentials and no trade execution
 
-### New in Step 5
-- Persistent watch tasks stored in `data/tasks.json`
-- Price reaches/goes above a level
-- Price reaches/goes below a level
-- Optional task labels
-- Active/triggered task state
-- Persistent Lilly alert when a condition is triggered
-- Task count in the Windows tray
-- Chrome popup task creation/deletion UI
-- Manual **Test observation** input to validate the engine end-to-end
-
-### Important architecture boundary
-Step 4 gives Lilly chart screenshots, but exact numeric price extraction from arbitrary chart pixels is not yet reliable. Step 5 therefore separates **observation input** from **condition evaluation** instead of pretending screenshots provide exact prices.
-
-The manual test observation proves:
-`observation -> task engine -> condition evaluation -> persistent alert`.
-
-A later structured market-data or AI chart-analysis adapter can feed this same engine automatically.
-
-## Update/test
+### Update
 ```powershell
 git pull origin main
 python run_lilly.py
 ```
+Then open `chrome://extensions` and click **Reload** on Lilly. Because the extension permissions changed, Chrome may ask you to approve the updated permissions.
 
-Then open `chrome://extensions` and **Reload** Lilly.
+### Test
+1. Open a TradingView chart.
+2. Lilly -> **Watch This Tab + Start Live Monitor**.
+3. Confirm **Automatic live price** begins showing a changing value.
+4. Add a condition close to the current price.
+5. Leave Lilly running. The Chrome popup may be closed; the background worker continues polling the selected TradingView tab.
+6. When the observed value reaches the condition, Lilly fires the persistent Windows alert.
 
-Test:
-1. Watch your chart tab.
-2. Add a task such as **Price reaches/goes above 100**.
-3. Under **Test observation**, enter `99` — no condition alert should fire.
-4. Enter `100` or `101` — Lilly should fire a persistent **Chart Condition Triggered** alert.
-5. The task should become **TRIGGERED** and no longer be active.
+### Reliability note
+This adapter reads TradingView's rendered DOM. TradingView can change its internal markup, so Lilly treats this as an adapter rather than a guaranteed market-data feed. The task engine remains independent so a structured data source can replace/supplement it later.
 
 ## Roadmap
-1. Persistent notification engine — completed
-2. Windows background process/system tray — completed
-3. Chrome extension + explicit tab permission — completed
-4. Chart capture/data adapter — completed
+1. Persistent notifications — completed
+2. Windows background/tray — completed
+3. Explicit Chrome tab connection — completed
+4. Chart capture — completed
 5. Task/condition engine — completed
-6. Observation history + automatic analysis/data adapter
-7. "Lilly, what's the update?"
+6. Automatic TradingView live-price adapter — completed
+7. Observation history + "Lilly, what's the update?"
 8. Start automatically with Windows
