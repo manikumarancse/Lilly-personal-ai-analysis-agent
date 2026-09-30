@@ -43,7 +43,7 @@ class ChromeBridge(QObject):
             def do_OPTIONS(self):self._headers(204)
             def do_GET(self):
                 parsed=urlparse(self.path);path=parsed.path
-                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.7.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
+                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.8.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
                 elif path=="/tasks":self._json({"ok":True,"tasks":bridge.task_engine.list_tasks()})
                 elif path=="/capture/latest":self._json({"ok":True,"capture":bridge.latest_capture})
                 elif path=="/observations":
@@ -52,7 +52,7 @@ class ChromeBridge(QObject):
                     except ValueError:limit=100
                     self._json({"ok":True,"observations":bridge.history.recent(limit)})
                 elif path=="/update":
-                    s=bridge.history.summary();tasks=bridge.task_engine.list_tasks();active=sum(1 for t in tasks if t.get("active"));triggered=sum(1 for t in tasks if t.get("triggered"))
+                    s=bridge.history.summary();tasks=bridge.task_engine.list_tasks();active=sum(1 for t in tasks if t.get("active"));started=(bridge.history.current_session or {}).get("started_at","");triggered=sum(1 for t in tasks if t.get("triggered") and (not started or (t.get("triggered_at") or "")>=started))
                     s.update({"active_tasks":active,"triggered_tasks":triggered,"watching":bridge.watched_tab});self._json({"ok":True,"update":s})
                 else:self._json({"ok":False,"error":"Not found"},404)
             def do_POST(self):
@@ -60,8 +60,14 @@ class ChromeBridge(QObject):
                 except json.JSONDecodeError:self._json({"ok":False,"error":"Invalid JSON"},400);return
                 if self.path=="/watch":
                     tab={"tab_id":body.get("tab_id"),"title":str(body.get("title") or "Untitled tab")[:300],"url":str(body.get("url") or "")[:3000]}
-                    with bridge._lock:bridge._watched_tab=tab
-                    bridge.watch_started.emit(tab);self._json({"ok":True,"watching":tab})
+                    with bridge._lock:bridge._watched_tab=tab;bridge._latest_price=None;bridge._latest_price_at=None
+                    session=bridge.history.start_session(tab,"watch_started");bridge.watch_started.emit(tab);self._json({"ok":True,"watching":tab,"session":session})
+                elif self.path=="/session/reset":
+                    watched=bridge.watched_tab
+                    if not watched:self._json({"ok":False,"error":"No tab is being watched"},409);return
+                    session=bridge.history.start_session(watched,"manual_reset")
+                    with bridge._lock:bridge._latest_price=None;bridge._latest_price_at=None
+                    self._json({"ok":True,"session":session})
                 elif self.path=="/stop":
                     with bridge._lock:bridge._watched_tab=None
                     bridge.watch_stopped.emit();self._json({"ok":True,"watching":None})
