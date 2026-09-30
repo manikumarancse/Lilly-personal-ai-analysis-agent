@@ -5,12 +5,13 @@ from urllib.parse import urlparse,parse_qs
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from PySide6.QtCore import QObject,Signal
 from .chart_analyzer import ChartAnalyzer
+from .market_data import CandleStore, MarketStructureAnalyzer
 
 class ChromeBridge(QObject):
     watch_started=Signal(dict);watch_stopped=Signal();capture_received=Signal(dict);task_created=Signal(dict);task_deleted=Signal(str);price_observed=Signal(float);bridge_error=Signal(str)
     def __init__(self,task_engine,history,host="127.0.0.1",port=8765,parent=None):
         super().__init__(parent);self.task_engine=task_engine;self.history=history;self.host=host;self.port=port;self._server=None;self._thread=None
-        self._watched_tab=None;self._latest_capture=None;self._latest_price=None;self._latest_price_at=None;self._lock=threading.Lock();self.analyzer=ChartAnalyzer()
+        self._watched_tab=None;self._latest_capture=None;self._latest_price=None;self._latest_price_at=None;self._lock=threading.Lock();self.analyzer=ChartAnalyzer();self.candles=CandleStore();self.structure_analyzer=MarketStructureAnalyzer()
         self.capture_dir=Path("data")/"captures";self.capture_dir.mkdir(parents=True,exist_ok=True)
     @property
     def watched_tab(self):
@@ -44,7 +45,7 @@ class ChromeBridge(QObject):
             def do_OPTIONS(self):self._headers(204)
             def do_GET(self):
                 parsed=urlparse(self.path);path=parsed.path
-                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.9.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
+                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.10.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
                 elif path=="/tasks":self._json({"ok":True,"tasks":bridge.task_engine.list_tasks()})
                 elif path=="/capture/latest":self._json({"ok":True,"capture":bridge.latest_capture})
                 elif path=="/observations":
@@ -52,6 +53,10 @@ class ChromeBridge(QObject):
                     try:limit=int(limit)
                     except ValueError:limit=100
                     self._json({"ok":True,"observations":bridge.history.recent(limit)})
+                elif path=="/market/context":
+                    self._json({"ok":True,"context":bridge.candles.context,"candles":len(bridge.candles.list())})
+                elif path=="/market/structure":
+                    self._json({"ok":True,"analysis":bridge.structure_analyzer.analyze(bridge.candles)})
                 elif path=="/analysis":
                     self._json({"ok":True,"analysis":bridge.analyzer.analyze(bridge.history)})
                 elif path=="/update":
@@ -81,6 +86,14 @@ class ChromeBridge(QObject):
                     try:meta=bridge._save_capture(body)
                     except (ValueError,TypeError,base64.binascii.Error) as exc:self._json({"ok":False,"error":str(exc)},400);return
                     self._json({"ok":True,"capture":meta})
+                elif self.path=="/market/context":
+                    context,changed=bridge.candles.set_context(str(body.get("symbol") or "")[:100] or None,str(body.get("timeframe") or "")[:30] or None);self._json({"ok":True,"context":context,"changed":changed})
+                elif self.path=="/market/candles":
+                    candles=body.get("candles")
+                    if not isinstance(candles,list):self._json({"ok":False,"error":"candles must be a list"},400);return
+                    try:count=bridge.candles.replace(candles)
+                    except (KeyError,ValueError,TypeError) as exc:self._json({"ok":False,"error":"Invalid OHLC candle: "+str(exc)},400);return
+                    self._json({"ok":True,"candles":count})
                 elif self.path=="/tasks":
                     try:task=bridge.task_engine.add_task(body.get("kind"),body.get("level"),body.get("label",""))
                     except (ValueError,TypeError) as exc:self._json({"ok":False,"error":str(exc)},400);return
