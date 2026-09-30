@@ -62,6 +62,7 @@ async function refresh() {
     el("stop").disabled = !watching;
     el("livePrice").textContent = data.latest_price ?? "Waiting for TradingView…";
     renderTasks(data.tasks || []);
+    try { const market = await request("/market/context"); const ctx = market.context || {}; el("marketContext").textContent = (ctx.symbol || "Symbol unknown") + " | " + (ctx.timeframe || "Timeframe unknown") + " | " + market.candles + " OHLC candle(s)"; } catch (_) {}
     const status = await chrome.runtime.sendMessage({ type: "LIVE_STATUS" });
     if (status?.lastPrice != null) el("livePrice").textContent = status.lastPrice;
     el("liveHint").textContent = watching ? "Updates are saved to the current Lilly session." : "Select a TradingView chart tab.";
@@ -110,6 +111,31 @@ el("addTask").onclick = async () => {
     el("label").value = "";
     el("message").textContent = "Watch task added.";
     await refresh();
+  } catch (error) { el("message").textContent = error.message; }
+};
+
+
+el("marketStructure").onclick = async () => {
+  try {
+    const data = await request("/market/structure");
+    const analysis = data.analysis;
+    el("structureBox").style.display = "block";
+    if (!analysis.ready) {
+      el("structureText").textContent = analysis.message + " Current candle count: " + analysis.candles + ".";
+      return;
+    }
+    el("structureText").textContent =
+      "Structure: " + analysis.structure.toUpperCase() +
+      " | Latest close: " + analysis.latest_close +
+      " | Support: " + analysis.support +
+      " | Resistance: " + analysis.resistance +
+      " | HH: " + analysis.higher_highs +
+      " | HL: " + analysis.higher_lows +
+      " | LH: " + analysis.lower_highs +
+      " | LL: " + analysis.lower_lows +
+      " | Bull candles: " + analysis.bullish_candles +
+      " | Bear candles: " + analysis.bearish_candles +
+      " | Based on " + analysis.candles + " structured OHLC candles.";
   } catch (error) { el("message").textContent = error.message; }
 };
 
