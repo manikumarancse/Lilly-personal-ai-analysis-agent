@@ -3,16 +3,18 @@ from PySide6.QtWidgets import QApplication,QSystemTrayIcon
 from .chrome_bridge import ChromeBridge
 from .notifications import LillyAlert
 from .task_engine import TaskEngine
+from .observation_history import ObservationHistory
 from .tray import LillyTray
 
 class LillyApplication:
     def __init__(self):
         self.app=QApplication(sys.argv);self.app.setApplicationName("Lilly");self.app.setQuitOnLastWindowClosed(False)
-        self.active_alerts=[];self.paused=False;self.watched_tab=None;self.latest_capture=None;self.latest_price=None;self.task_engine=TaskEngine()
+        self.active_alerts=[];self.paused=False;self.watched_tab=None;self.latest_capture=None;self.latest_price=None
+        self.task_engine=TaskEngine();self.history=ObservationHistory()
         if not QSystemTrayIcon.isSystemTrayAvailable():raise RuntimeError("Windows system tray is not available.")
         self.tray=LillyTray(self.app);self.tray.test_alert.connect(self.test_alert);self.tray.status_requested.connect(self.show_status)
         self.tray.pause_changed.connect(self.set_paused);self.tray.exit_requested.connect(self.shutdown);self.tray.set_task_count(self._active_task_count());self.tray.show()
-        self.bridge=ChromeBridge(self.task_engine,parent=self.app);self.bridge.watch_started.connect(self.on_watch_started);self.bridge.watch_stopped.connect(self.on_watch_stopped)
+        self.bridge=ChromeBridge(self.task_engine,self.history,parent=self.app);self.bridge.watch_started.connect(self.on_watch_started);self.bridge.watch_stopped.connect(self.on_watch_stopped)
         self.bridge.capture_received.connect(self.on_capture_received);self.bridge.task_created.connect(self.on_task_changed);self.bridge.task_deleted.connect(self.on_task_changed)
         self.bridge.price_observed.connect(self.on_price_observed);self.bridge.bridge_error.connect(self.on_bridge_error)
         if not self.bridge.start():self.show_alert("Lilly — Chrome Bridge Error","Could not start 127.0.0.1:8765. Another Lilly process may already be running.",force=True)
@@ -31,7 +33,7 @@ class LillyApplication:
     def set_paused(self,paused):self.paused=paused
     def on_watch_started(self,tab):
         self.watched_tab=tab;self.latest_capture=None;self.latest_price=None;self.tray.set_watched_tab(tab.get("title"))
-        self.show_alert("Lilly — Live Monitor Ready",f'Watching: {tab.get("title","Untitled tab")}\nLilly will accept live TradingView price observations from this selected tab.',force=True)
+        self.show_alert("Lilly — Live Monitor Ready",f'Watching: {tab.get("title","Untitled tab")}\nLive observations will also be saved to Lilly history.',force=True)
     def on_watch_stopped(self):
         old=self.watched_tab.get("title") if self.watched_tab else "Chrome tab";self.watched_tab=None;self.latest_capture=None;self.latest_price=None;self.tray.set_watched_tab(None)
         self.show_alert("Lilly — Chrome Watch Stopped",f"Stopped watching: {old}",force=True)
