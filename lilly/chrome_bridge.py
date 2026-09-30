@@ -1,21 +1,16 @@
-import base64
-import json
-import threading
+import base64,json,threading
 from datetime import datetime
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from PySide6.QtCore import QObject, Signal
+from urllib.parse import urlparse,parse_qs
+from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+from PySide6.QtCore import QObject,Signal
 
 class ChromeBridge(QObject):
-    watch_started=Signal(dict); watch_stopped=Signal(); capture_received=Signal(dict)
-    task_created=Signal(dict); task_deleted=Signal(str); price_observed=Signal(float); bridge_error=Signal(str)
-
-    def __init__(self,task_engine,host="127.0.0.1",port=8765,parent=None):
-        super().__init__(parent); self.task_engine=task_engine; self.host=host; self.port=port
-        self._server=None; self._thread=None; self._watched_tab=None; self._latest_capture=None
-        self._latest_price=None; self._latest_price_at=None; self._lock=threading.Lock()
-        self.capture_dir=Path("data")/"captures"; self.capture_dir.mkdir(parents=True,exist_ok=True)
-
+    watch_started=Signal(dict);watch_stopped=Signal();capture_received=Signal(dict);task_created=Signal(dict);task_deleted=Signal(str);price_observed=Signal(float);bridge_error=Signal(str)
+    def __init__(self,task_engine,history,host="127.0.0.1",port=8765,parent=None):
+        super().__init__(parent);self.task_engine=task_engine;self.history=history;self.host=host;self.port=port;self._server=None;self._thread=None
+        self._watched_tab=None;self._latest_capture=None;self._latest_price=None;self._latest_price_at=None;self._lock=threading.Lock()
+        self.capture_dir=Path("data")/"captures";self.capture_dir.mkdir(parents=True,exist_ok=True)
     @property
     def watched_tab(self):
         with self._lock:return dict(self._watched_tab) if self._watched_tab else None
@@ -28,42 +23,40 @@ class ChromeBridge(QObject):
     @property
     def latest_price_at(self):
         with self._lock:return self._latest_price_at
-
     def _save_capture(self,body):
         data_url=body.get("image_data","")
-        if not data_url.startswith("data:image/") or "," not in data_url: raise ValueError("Missing or invalid image_data")
-        header,encoded=data_url.split(",",1); extension="png" if "png" in header else "jpg"
-        image_bytes=base64.b64decode(encoded,validate=True)
-        if len(image_bytes)>15*1024*1024: raise ValueError("Capture is too large")
-        now=datetime.now(); image_path=self.capture_dir/f"latest_chart.{extension}"; image_path.write_bytes(image_bytes)
-        meta={"captured_at":now.isoformat(timespec="seconds"),"path":str(image_path.resolve()),"bytes":len(image_bytes),
-              "tab_id":body.get("tab_id"),"title":str(body.get("title") or "Untitled tab")[:300],
-              "url":str(body.get("url") or "")[:3000],"width":body.get("width"),"height":body.get("height")}
+        if not data_url.startswith("data:image/") or "," not in data_url:raise ValueError("Missing or invalid image_data")
+        header,encoded=data_url.split(",",1);extension="png" if "png" in header else "jpg";image_bytes=base64.b64decode(encoded,validate=True)
+        if len(image_bytes)>15*1024*1024:raise ValueError("Capture is too large")
+        now=datetime.now();image_path=self.capture_dir/f"latest_chart.{extension}";image_path.write_bytes(image_bytes)
+        meta={"captured_at":now.isoformat(timespec="seconds"),"path":str(image_path.resolve()),"bytes":len(image_bytes),"tab_id":body.get("tab_id"),"title":str(body.get("title") or "Untitled tab")[:300],"url":str(body.get("url") or "")[:3000],"width":body.get("width"),"height":body.get("height")}
         (self.capture_dir/"latest_chart.json").write_text(json.dumps(meta,indent=2),encoding="utf-8")
         with self._lock:self._latest_capture=meta
-        self.capture_received.emit(meta); return meta
-
+        self.capture_received.emit(meta);return meta
     def start(self):
         bridge=self
         class Handler(BaseHTTPRequestHandler):
             def _headers(self,status=200):
-                self.send_response(status); self.send_header("Content-Type","application/json; charset=utf-8")
-                self.send_header("Access-Control-Allow-Origin","*"); self.send_header("Access-Control-Allow-Methods","GET, POST, DELETE, OPTIONS")
-                self.send_header("Access-Control-Allow-Headers","Content-Type"); self.end_headers()
-            def _json(self,payload,status=200): self._headers(status); self.wfile.write(json.dumps(payload).encode("utf-8"))
-            def _body(self):
-                length=int(self.headers.get("Content-Length","0")); return json.loads(self.rfile.read(length) or b"{}")
-            def do_OPTIONS(self): self._headers(204)
+                self.send_response(status);self.send_header("Content-Type","application/json; charset=utf-8");self.send_header("Access-Control-Allow-Origin","*");self.send_header("Access-Control-Allow-Methods","GET, POST, DELETE, OPTIONS");self.send_header("Access-Control-Allow-Headers","Content-Type");self.end_headers()
+            def _json(self,payload,status=200):self._headers(status);self.wfile.write(json.dumps(payload).encode("utf-8"))
+            def _body(self):length=int(self.headers.get("Content-Length","0"));return json.loads(self.rfile.read(length) or b"{}")
+            def do_OPTIONS(self):self._headers(204)
             def do_GET(self):
-                if self.path=="/health":
-                    self._json({"ok":True,"service":"lilly","version":"0.6.0","watching":bridge.watched_tab,
-                      "latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,
-                      "latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
-                elif self.path=="/tasks": self._json({"ok":True,"tasks":bridge.task_engine.list_tasks()})
-                elif self.path=="/capture/latest": self._json({"ok":True,"capture":bridge.latest_capture})
+                parsed=urlparse(self.path);path=parsed.path
+                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.7.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
+                elif path=="/tasks":self._json({"ok":True,"tasks":bridge.task_engine.list_tasks()})
+                elif path=="/capture/latest":self._json({"ok":True,"capture":bridge.latest_capture})
+                elif path=="/observations":
+                    limit=parse_qs(parsed.query).get("limit",["100"])[0]
+                    try:limit=int(limit)
+                    except ValueError:limit=100
+                    self._json({"ok":True,"observations":bridge.history.recent(limit)})
+                elif path=="/update":
+                    s=bridge.history.summary();tasks=bridge.task_engine.list_tasks();active=sum(1 for t in tasks if t.get("active"));triggered=sum(1 for t in tasks if t.get("triggered"))
+                    s.update({"active_tasks":active,"triggered_tasks":triggered,"watching":bridge.watched_tab});self._json({"ok":True,"update":s})
                 else:self._json({"ok":False,"error":"Not found"},404)
             def do_POST(self):
-                try: body=self._body()
+                try:body=self._body()
                 except json.JSONDecodeError:self._json({"ok":False,"error":"Invalid JSON"},400);return
                 if self.path=="/watch":
                     tab={"tab_id":body.get("tab_id"),"title":str(body.get("title") or "Untitled tab")[:300],"url":str(body.get("url") or "")[:3000]}
@@ -86,11 +79,9 @@ class ChromeBridge(QObject):
                 elif self.path=="/observe/price":
                     try:value=float(body.get("value"))
                     except (ValueError,TypeError):self._json({"ok":False,"error":"A numeric price is required"},400);return
-                    watched=bridge.watched_tab
-                    supplied_tab=body.get("tab_id")
-                    if supplied_tab is not None and watched and supplied_tab!=watched.get("tab_id"):
-                        self._json({"ok":False,"error":"Price is not from the selected tab"},403);return
-                    now=datetime.now().isoformat(timespec="seconds")
+                    watched=bridge.watched_tab;supplied_tab=body.get("tab_id")
+                    if supplied_tab is not None and watched and supplied_tab!=watched.get("tab_id"):self._json({"ok":False,"error":"Price is not from the selected tab"},403);return
+                    item=bridge.history.add_price(value,watched,body.get("source","chart"));now=item["observed_at"]
                     with bridge._lock:bridge._latest_price=value;bridge._latest_price_at=now
                     bridge.price_observed.emit(value);self._json({"ok":True,"value":value,"observed_at":now})
                 else:self._json({"ok":False,"error":"Not found"},404)
