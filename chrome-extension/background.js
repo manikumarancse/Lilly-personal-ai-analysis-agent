@@ -53,6 +53,43 @@ async function readTradingViewPrice(tabId){
   }catch(e){ return null; }
 }
 
+
+async function readTradingViewContext(tabId){
+  try{
+    const results=await chrome.scripting.executeScript({
+      target:{tabId},
+      func:()=>{
+        const title=document.title||"";
+        const body=(document.body?.innerText||"").slice(0,4000);
+        let symbol=null;
+        const titleMatch=title.match(/^([^|–—]+?)(?:\s+[0-9]+(?:m|h|D|W|M)?\s|[|–—])/i);
+        if(titleMatch) symbol=titleMatch[1].trim();
+        const tfCandidates=["1m","3m","5m","15m","30m","45m","1h","2h","3h","4h","1D","1W","1M"];
+        let timeframe=null;
+        for(const tf of tfCandidates){
+          const re=new RegExp("(^|\\\\s)"+tf.replace("m","m")+"($|\\\\s)","i");
+          if(re.test(body)){timeframe=tf;break;}
+        }
+        return {symbol,timeframe,title};
+      }
+    });
+    return results?.[0]?.result||null;
+  }catch(e){return null;}
+}
+
+async function sendContext(){
+  if(watchedTabId===null) return;
+  const context=await readTradingViewContext(watchedTabId);
+  if(!context) return;
+  try{
+    await fetch(API+"/market/context",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({symbol:context.symbol,timeframe:context.timeframe})
+    });
+    await chrome.storage.local.set({lillySymbol:context.symbol,lillyTimeframe:context.timeframe});
+  }catch(e){}
+}
+
 async function sendPrice(price){
   try{
     await fetch(API+"/observe/price",{
@@ -64,6 +101,7 @@ async function sendPrice(price){
 
 async function tick(){
   if(watchedTabId===null) return;
+  await sendContext();
   try{
     const tab=await chrome.tabs.get(watchedTabId);
     if(!tab?.url?.includes("tradingview.com")) return;
