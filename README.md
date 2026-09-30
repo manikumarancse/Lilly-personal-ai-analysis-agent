@@ -1,34 +1,25 @@
 # Project Lilly
 
-## Current version: 0.7.0 — Observation history + What's the update?
+## Current version: 0.8.0 — Session-based chart monitoring
 
-Lilly now persists automatic price observations locally and can summarize what happened while the chart was being watched.
+Lilly now separates observations into monitoring sessions. Historical observations stay saved, but old timeframe or symbol values no longer enter the current update summary.
 
 ### New
-- `data/observations.jsonl` local observation history
-- Timestamp, price, source and selected-tab context per observation
-- `GET /observations?limit=100`
-- `GET /update`
-- **What's the update?** button in the Chrome extension
-- Update includes latest price, observed high/low, change over the returned history window, observation count, active tasks and triggered tasks
-- Existing Step 5 condition/notification behavior remains unchanged
+- Watching a tab starts a fresh session.
+- Every new price observation gets a session ID.
+- **What's the update?** summarizes only the current session.
+- Triggered count is limited to tasks triggered during the current session.
+- **Start New Session** resets the current summary after a timeframe or symbol change without deleting history.
+- Existing condition alerts remain intact.
 
-### Update/test
+### Update and test
+
 ```powershell
 git pull origin main
 .\.venv\Scripts\Activate.ps1
 python run_lilly.py
 ```
-Then open `chrome://extensions` and Reload Lilly.
 
-Open TradingView, start watching the tab, let observations accumulate, then click **What's the update?**.
+Reload Lilly in `chrome://extensions`. Start watching TradingView. When you change timeframe or symbol, click **Start New Session**, wait for new observations, then click **What's the update?**.
 
-## Roadmap
-1. Persistent notifications — completed
-2. Windows background/tray — completed
-3. Explicit Chrome tab connection — completed
-4. Chart capture — completed
-5. Task/condition engine — completed
-6. Automatic TradingView live-price adapter — completed
-7. Observation history + "What's the update?" — completed
-8. Start automatically with Windows
+Automatic detection of TradingView timeframe and symbol changes is a later enhancement.
