@@ -134,6 +134,28 @@ el("getUpdate").onclick = async () => {
   } catch (error) { el("message").textContent = error.message; }
 };
 
+
+el("analyzeSession").onclick = async () => {
+  try {
+    const data = await request("/analysis");
+    const analysis = data.analysis;
+    el("analysisBox").style.display = "block";
+    if (!analysis.ready) {
+      el("analysisText").textContent = analysis.message;
+      return;
+    }
+    const pct = analysis.change_pct == null ? "n/a" : (analysis.change_pct >= 0 ? "+" : "") + analysis.change_pct.toFixed(3) + "%";
+    el("analysisText").textContent =
+      "Direction: " + analysis.direction.toUpperCase() +
+      " | Momentum: " + analysis.momentum +
+      " | Latest: " + analysis.latest +
+      " | Change: " + (analysis.change >= 0 ? "+" : "") + analysis.change.toFixed(3) + " (" + pct + ")" +
+      " | Range: " + analysis.low + " - " + analysis.high +
+      " | Position: " + analysis.range_position_pct.toFixed(1) + "% (" + analysis.location + ")" +
+      " | Based on " + analysis.observations + " current-session observations.";
+  } catch (error) { el("message").textContent = error.message; }
+};
+
 el("resetSession").onclick = async () => {
   try {
     await post("/session/reset");
