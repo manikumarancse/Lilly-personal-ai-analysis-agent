@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Lilly — Personal AI Analysis Agent",
-  "version": "0.9.0",
-  "description": "Monitor and analyze an explicitly selected TradingView chart with session-based live price history and alerts.",
+  "version": "0.10.0",
+  "description": "Monitor TradingView chart context, live prices, structured OHLC data, session history and alerts.",
   "permissions": [
     "activeTab",
     "tabs",
