@@ -4,12 +4,13 @@ from pathlib import Path
 from urllib.parse import urlparse,parse_qs
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from PySide6.QtCore import QObject,Signal
+from .chart_analyzer import ChartAnalyzer
 
 class ChromeBridge(QObject):
     watch_started=Signal(dict);watch_stopped=Signal();capture_received=Signal(dict);task_created=Signal(dict);task_deleted=Signal(str);price_observed=Signal(float);bridge_error=Signal(str)
     def __init__(self,task_engine,history,host="127.0.0.1",port=8765,parent=None):
         super().__init__(parent);self.task_engine=task_engine;self.history=history;self.host=host;self.port=port;self._server=None;self._thread=None
-        self._watched_tab=None;self._latest_capture=None;self._latest_price=None;self._latest_price_at=None;self._lock=threading.Lock()
+        self._watched_tab=None;self._latest_capture=None;self._latest_price=None;self._latest_price_at=None;self._lock=threading.Lock();self.analyzer=ChartAnalyzer()
         self.capture_dir=Path("data")/"captures";self.capture_dir.mkdir(parents=True,exist_ok=True)
     @property
     def watched_tab(self):
@@ -43,7 +44,7 @@ class ChromeBridge(QObject):
             def do_OPTIONS(self):self._headers(204)
             def do_GET(self):
                 parsed=urlparse(self.path);path=parsed.path
-                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.8.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
+                if path=="/health":self._json({"ok":True,"service":"lilly","version":"0.9.0","watching":bridge.watched_tab,"latest_capture":bridge.latest_capture,"latest_price":bridge.latest_price,"latest_price_at":bridge.latest_price_at,"tasks":bridge.task_engine.list_tasks()})
                 elif path=="/tasks":self._json({"ok":True,"tasks":bridge.task_engine.list_tasks()})
                 elif path=="/capture/latest":self._json({"ok":True,"capture":bridge.latest_capture})
                 elif path=="/observations":
@@ -51,6 +52,8 @@ class ChromeBridge(QObject):
                     try:limit=int(limit)
                     except ValueError:limit=100
                     self._json({"ok":True,"observations":bridge.history.recent(limit)})
+                elif path=="/analysis":
+                    self._json({"ok":True,"analysis":bridge.analyzer.analyze(bridge.history)})
                 elif path=="/update":
                     s=bridge.history.summary();tasks=bridge.task_engine.list_tasks();active=sum(1 for t in tasks if t.get("active"));started=(bridge.history.current_session or {}).get("started_at","");triggered=sum(1 for t in tasks if t.get("triggered") and (not started or (t.get("triggered_at") or "")>=started))
                     s.update({"active_tasks":active,"triggered_tasks":triggered,"watching":bridge.watched_tab});self._json({"ok":True,"update":s})
